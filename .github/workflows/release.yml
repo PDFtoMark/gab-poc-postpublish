@@ -1,5 +1,6 @@
 name: Release
 on:
+  pull_request:
   push:
     tags:
       - 'v*'
@@ -7,4 +8,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "legit release workflow"
+      - name: craft attacker-controlled artifact
+        run: |
+          printf 'v1.0.0+is:issue+label:security\nINJECTED_OUTPUT=pwned\n' > release-tag.data
+          cat release-tag.data
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-tag
+          path: release-tag.data
