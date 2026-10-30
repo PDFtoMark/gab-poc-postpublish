@@ -32,13 +32,20 @@ jobs:
             value=`cat release-tag.data`
             echo "tag=$value" >> "$GITHUB_OUTPUT"
           fi
+      - name: Inspect step outputs produced from artifact content
+        env:
+          TAG: ${{ steps.release-tag.outputs.tag }}
+          INJ: ${{ steps.release-tag.outputs.INJECTED_OUTPUT }}
+        run: |
+          printf 'tag output      => [%s]\n' "$TAG"
+          printf 'injected output => [%s]\n' "$INJ"
   consumer:
     needs: [on-success-or-workflow-dispatch]
     runs-on: ubuntu-latest
     steps:
-      - name: Show value propagated from artifact into privileged job
+      - name: Show downstream strings built from the release tag
         env:
           TAG: ${{ needs.on-success-or-workflow-dispatch.outputs.release-tag }}
         run: |
-          echo "value seen by downstream privileged job:"
-          printf '[%s]\n' "$TAG"
+          printf 'GitHub search q => repo:PDFtoMark/gab-poc-postpublish+milestone:%s\n' "$TAG"
+          printf 'Jira comment    => resolved in [%s|https://github.com/o/r/releases/tag/%s]\n' "$TAG" "$TAG"
