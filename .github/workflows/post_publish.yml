@@ -1,0 +1,44 @@
+name: Post Publish PoC
+on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        type: string
+        description: 'Semver release tag e.g. v1.1.0'
+        required: true
+  workflow_run:
+    workflows: [Release]
+    types:
+      - completed
+jobs:
+  on-success-or-workflow-dispatch:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    outputs:
+      release-tag: ${{ steps.release-tag.outputs.tag }}
+    steps:
+      - if: github.event_name == 'workflow_run'
+        name: Download Artifact from Release workflow
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: release.yml
+          name: release-tag
+      - name: Output Release Tag
+        id: release-tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ github.event.inputs.release-tag }}" >> "$GITHUB_OUTPUT"
+          else
+            value=`cat release-tag.data`
+            echo "tag=$value" >> "$GITHUB_OUTPUT"
+          fi
+  consumer:
+    needs: [on-success-or-workflow-dispatch]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show value propagated from artifact into privileged job
+        env:
+          TAG: ${{ needs.on-success-or-workflow-dispatch.outputs.release-tag }}
+        run: |
+          echo "value seen by downstream privileged job:"
+          printf '[%s]\n' "$TAG"
